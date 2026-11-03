@@ -1,0 +1,64 @@
+{
+    "$schema": "https://getcomposer.org/schema.json",
+    "name": "philipannis/laravel-http-paginate",
+    "description": "Add paginate() to Laravel's HTTP client. Consume paginated APIs through a native LazyCollection while keeping your existing request configuration.",
+    "type": "library",
+    "keywords": [
+        "laravel",
+        "http-client",
+        "api",
+        "pagination",
+        "lazy-collection",
+        "cursor"
+    ],
+    "homepage": "https://github.com/philipannis/laravel-http-paginate",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Philip Annis",
+            "homepage": "https://github.com/philipannis",
+            "role": "Developer"
+        }
+    ],
+    "require": {
+        "php": "^8.2",
+        "guzzlehttp/guzzle": "^7.8",
+        "guzzlehttp/psr7": "^2.6",
+        "illuminate/http": "^12.0 || ^13.0",
+        "illuminate/support": "^12.0 || ^13.0"
+    },
+    "require-dev": {
+        "laravel/pint": "^1.0",
+        "orchestra/testbench": "^10.0 || ^11.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "PhilipAnnis\\HttpPaginate\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "PhilipAnnis\\HttpPaginate\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "PhilipAnnis\\HttpPaginate\\HttpPaginateServiceProvider"
+            ]
+        }
+    },
+    "scripts": {
+        "format": "pint",
+        "format:check": "pint --test",
+        "test": "phpunit"
+    },
+    "scripts-descriptions": {
+        "format": "Format PHP files with Laravel Pint.",
+        "format:check": "Check PHP formatting without changing files.",
+        "test": "Run the PHPUnit test suite."
+    },
+    "config": {
+        "sort-packages": true
+    }
+}
