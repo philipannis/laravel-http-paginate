@@ -1,7 +1,7 @@
 # Laravel HTTP Paginate
 
-![PHP](https://img.shields.io/badge/PHP-8.2--8.5-777BB4?style=flat-square)
-![Laravel](https://img.shields.io/badge/Laravel-12--13-FF2D20?style=flat-square)
+![PHP](https://img.shields.io/badge/PHP-8.2%E2%80%938.5-777BB4?style=flat-square)
+![Laravel](https://img.shields.io/badge/Laravel-12%E2%80%9313-FF2D20?style=flat-square)
 [![License](https://img.shields.io/badge/license-MIT-334155?style=flat-square)](LICENSE)
 
 Add `paginate()` to Laravel's HTTP client to read paginated APIs with a native `LazyCollection`. Choose numbered pages, cursors, JSON next links, or HTTP Link headers using named arguments. Your existing authentication, headers, middleware, timeouts, and retries apply to every page.
@@ -24,28 +24,27 @@ Requests run as you iterate through the collection. Items arrive in their origin
 Requires PHP 8.2+ with Laravel 12, or PHP 8.3+ with Laravel 13.
 
 ```bash
-# Install the package through your application's Composer dependencies.
 composer require philipannis/laravel-http-paginate
 ```
 
-Call `paginate()` instead of sending a single GET request.
+Then call `paginate()` instead of sending a single GET request.
 
 ```php
-// Use Laravel's configured HTTP client throughout the traversal.
 use Illuminate\Support\Facades\Http;
 
-// Create the collection without sending a request.
-$users = Http::paginate('https://api.example.com/users');
+// Fetch pages as their individual products are consumed.
+$products = Http::withToken(config('services.catalog.token'))
+    ->acceptJson()
+    ->paginate('https://api.example.com/products');
 
-// Fetch pages as their individual users are consumed.
-foreach ($users as $user) {
-    // Process user.
+foreach ($products as $product) {
+    // Process product.
 }
 ```
 
-By default, requests start with `?page=1`, read items from the response's `data` array, and continue until an empty array is returned. The examples below use the same `Http` import. `$url` represents the API endpoint.
+By default, requests start with `?page=1`, read items from the response's `data` array, and continue until an empty array is returned. The examples below use the same `Http` import.
 
-Laravel discovers the service provider automatically. There are no package migrations, routes, commands, scheduled jobs, or configuration files to set up.
+Laravel discovers the service provider automatically. There are no package migrations, routes, commands, or scheduled jobs to set up. You don't need a published config file.
 
 If you've disabled package discovery, add `PhilipAnnis\HttpPaginate\HttpPaginateServiceProvider::class` to the existing array in `bootstrap/providers.php`.
 
@@ -57,13 +56,10 @@ Select **one strategy** with `page`, `cursor`, or `next`. Omitting all three use
 
 ```php
 // Use the default page query parameter.
-$users = Http::paginate($url);
+$products = Http::paginate('https://api.example.com/products');
 
 // Use the API's own page parameter name.
-$users = Http::paginate(
-    $url,
-    page: 'page_number',
-);
+$products = Http::paginate('https://api.example.com/products', page: 'page_number');
 ```
 
 The page number always starts at **1** and increases after each successful page. An existing value of the selected parameter is replaced. Unrelated query parameters are preserved without adding duplicate page parameters.
@@ -76,10 +72,7 @@ Pass the JSON path containing the **next cursor**, using Laravel's dot notation.
 
 ```php
 // Read the next token from nested response metadata.
-$users = Http::paginate(
-    $url,
-    cursor: 'meta.next_cursor',
-);
+$products = Http::paginate('https://api.example.com/products', cursor: 'meta.next_cursor');
 ```
 
 For this response, the following request includes `?cursor=abc123`.
@@ -99,20 +92,17 @@ A missing, null, or blank cursor ends pagination. Strings and integers are accep
 
 ```php
 // Follow the next URL supplied in the JSON response.
-$users = Http::paginate(
-    $url,
-    next: 'links.next',
-);
+$products = Http::paginate('https://api.example.com/products', next: 'links.next');
 ```
 
 ```json
 {
     "data": [{"id": 1}, {"id": 2}],
-    "links": {"next": "https://api.example.com/users?page=2"}
+    "links": {"next": "https://api.example.com/products?page=2"}
 }
 ```
 
-Absolute and relative links are supported. Relative references such as `?page=2`, `/v2/users?page=2`, and `../users?page=2` resolve against the current page URL, including its effective location after redirects.
+Absolute and relative links are supported. Relative references such as `?page=2`, `/v2/products?page=2`, and `../products?page=2` resolve against the current page URL, including its effective location after redirects.
 
 A missing, null, or blank next URL ends pagination. Repeated request URLs throw `RuntimeException` before being fetched again. URL fragments do not identify a different request. Non-string next URLs throw `UnexpectedValueException`.
 
@@ -122,14 +112,11 @@ The special value **`header`** is reserved for the HTTP Link strategy. It does n
 
 ```php
 // Follow the next relation supplied in HTTP Link headers.
-$users = Http::paginate(
-    $url,
-    next: 'header',
-);
+$products = Http::paginate('https://api.example.com/products', next: 'header');
 ```
 
 ```http
-Link: <https://api.example.com/users?page=2>; rel="next", <https://api.example.com/users?page=9>; rel="last"
+Link: <https://api.example.com/products?page=2>; rel="next", <https://api.example.com/products?page=9>; rel="last"
 ```
 
 The first applicable link with a `next` relation supplies the following URL. Multiple header fields, multiple relations, quoted parameters, and relative URLs are supported. Links with an explicit `anchor` are ignored because they describe a different context.
@@ -138,12 +125,10 @@ Pagination ends when no next relation exists. Repeated URLs use the same loop de
 
 ## Per-request options
 
-All pagination settings are passed directly to `paginate()`.
-
 ```php
 // Read nested items while fetching no more than five numbered pages.
-$users = Http::paginate(
-    $url,
+$products = Http::paginate(
+    'https://api.example.com/products',
     page: 'page',
     items: 'response.data.items',
     limit: 5,
@@ -165,10 +150,7 @@ Blank parameter names and paths are rejected. Passing `null` for a strategy is t
 
 ```php
 // Fetch at most five pages, retaining every item on those pages.
-$users = Http::paginate(
-    $url,
-    limit: 5,
-);
+$products = Http::paginate('https://api.example.com/products', limit: 5);
 ```
 
 `limit` counts **pages**, not items. Reaching the limit stops without a discovery request or reading another continuation token. Laravel's retries belong to the current page and can perform additional HTTP attempts. Zero and negative limits throw `InvalidArgumentException` immediately. Omit the argument or pass `null` for no page limit.
@@ -179,15 +161,14 @@ Use the collection's `take()` method to limit items instead.
 
 ```php
 // Creating the collection sends no requests.
-$users = Http::paginate($url);
+$products = Http::paginate('https://api.example.com/products');
 
-// Consume pages only as their users are needed.
-foreach ($users as $user) {
-    // Process user.
+foreach ($products as $product) {
+    // Process product.
 }
 
 // Fetch only the pages needed to retrieve ten items.
-$firstTen = Http::paginate($url)->take(10)->all();
+$firstTen = Http::paginate('https://api.example.com/products')->take(10)->all();
 ```
 
 Pages are fetched one at a time. Items are returned in order with continuous numeric keys. The package keeps the current page in memory and tracks cursor or URL values to detect repeated pages.
@@ -202,16 +183,10 @@ Each response must have a successful 2xx status and contain valid JSON. The sele
 
 ```php
 // Extract items from the API's results array.
-$users = Http::paginate(
-    $url,
-    items: 'results',
-);
+$products = Http::paginate('https://api.example.com/products', items: 'results');
 
 // Use dot notation for nested item arrays.
-$users = Http::paginate(
-    $url,
-    items: 'response.data.items',
-);
+$products = Http::paginate('https://api.example.com/products', items: 'response.data.items');
 ```
 
 Missing or null item paths, JSON objects in place of item arrays, invalid JSON, and other unexpected structures throw `UnexpectedValueException`. They never silently become an empty result. An empty HTTP 204 body also fails JSON validation. An empty items array ends numbered pagination. Cursor and link strategies continue when the response supplies a valid next cursor or link.
@@ -228,20 +203,17 @@ Configure the request before calling `paginate()`.
 
 ```php
 // Keep authentication and timeouts on every cursor request.
-$users = Http::withToken($token)
+$products = Http::withToken(config('services.catalog.token'))
     ->timeout(10)
-    ->paginate(
-        $url,
-        cursor: 'meta.next_cursor',
-    );
+    ->paginate('https://api.example.com/products', cursor: 'meta.next_cursor');
 
 // Apply tenant headers and Laravel's retry policy to every numbered page.
-$users = Http::withToken($token)
+$products = Http::withToken(config('services.catalog.token'))
     ->acceptJson()
-    ->withHeaders(['X-Tenant-ID' => $tenantId])
+    ->withHeaders(['X-Tenant-ID' => '42'])
     ->timeout(10)
     ->retry(3, 100)
-    ->paginate($url);
+    ->paginate('https://api.example.com/products');
 ```
 
 Authentication, headers, timeouts, retry rules, middleware, callbacks, transfer options, HTTP events, and fakes keep using Laravel's client. Retry callbacks that update credentials apply to later pages in the same traversal. Pagination does not change the original builder's query or request options.
@@ -259,45 +231,23 @@ Pagination sends synchronous **GET** requests with JSON item arrays at a non-emp
 `Http::fake()` and Laravel's ordinary HTTP assertions work with pagination. Configure fakes before creating the collection, then consume it before asserting requests.
 
 ```php
-// Fail immediately if a request is missing from the configured fake sequence.
 Http::preventStrayRequests();
 
-// Return two item pages followed by the empty page that ends numbered pagination.
 Http::fakeSequence()
     ->push(['data' => [['id' => 1], ['id' => 2]]])
     ->push(['data' => [['id' => 3]]])
     ->push(['data' => []]);
 
-// Create a lazy traversal without consuming any fake responses.
-$users = Http::paginate('https://api.example.com/users');
+$products = Http::paginate('https://api.example.com/products');
 
-// Verify that collection creation leaves the transport untouched.
 Http::assertNothingSent();
 
-// Consume the collection to fetch the pages and collect their user IDs.
-$ids = $users->pluck('id')->all(); // [1, 2, 3]
+$this->assertSame([1, 2, 3], $products->pluck('id')->all());
 
-// Include the terminal empty page in the request count.
 Http::assertSentCount(3);
 ```
 
-### Run the package checks
-
-```bash
-# Install the package's test and formatting dependencies.
-composer install
-
-# Validate package metadata before running its checks.
-composer validate --strict
-
-# Run behavior and integration tests without network requests.
-composer run test
-
-# Verify formatting without changing PHP files.
-composer run format:check
-```
-
-Tests use PHPUnit and Orchestra Testbench. Network requests are blocked. HTTP fakes and a controlled in-memory redirect transport cover the public API and response handling. GitHub Actions runs separate Laravel 12 and 13 dependency sets. Laravel Pint uses the Laravel preset. Run `composer run format` to apply formatting.
+Include the terminal empty page in the request count for numbered pagination. Cursor and link strategies stop when their continuation value is missing, so return the same cursor or link metadata your API supplies in your fake responses.
 
 ## License
 
